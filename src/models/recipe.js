@@ -13,7 +13,14 @@ const recipeSchema = new mongoose.Schema({
     private: {
         type: Boolean,
         default: false
+    },
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'User'
     }
+},{
+    timestamps: true
 })
 
 const Recipe = mongoose.model('Recipe', recipeSchema)
