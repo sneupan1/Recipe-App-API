@@ -6,7 +6,7 @@ const recipeSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    ingridients: {
+    ingredients: {
         type: String,
         required: true
     },
@@ -18,10 +18,21 @@ const recipeSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
+    },
+    image : {
+        type: Buffer
     }
 },{
     timestamps: true
 })
+
+recipeSchema.methods.toJSON = function() {
+    const recipeObject = this.toObject()
+
+    delete recipeObject.image
+
+    return recipeObject
+}
 
 const Recipe = mongoose.model('Recipe', recipeSchema)
 

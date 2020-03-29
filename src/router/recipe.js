@@ -2,6 +2,8 @@ const express = require('express')
 const router = new express.Router()
 const auth = require('../middleware/auth')
 const Recipe = require('../models/recipe')
+const multer = require('multer')
+const sharp = require('sharp')
 
 
 router.post('/recipes', auth, async (req, res) => {
@@ -65,7 +67,7 @@ router.get('/recipes/:id', auth, async (req, res) => {
 
 router.patch('/recipes/:id', auth, async (req, res) => {
     const updates = Object.keys(req.body)
-    const AllowedUpdates = ["private", "name", "ingridients"]
+    const AllowedUpdates = ["private", "name", "ingredients"]
     const isAllowed = updates.every((update) => AllowedUpdates.includes(update))
 
     if (!isAllowed) {
@@ -99,4 +101,52 @@ router.delete('/recipes/:id', auth, async (req, res) => {
     }
 })
 
+const upload = multer({
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb) {
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            return cb(new Error('Please upload image only')) 
+        }
+        cb(undefined, true)
+    }
+})
+
+router.post('/recipes/:id/image', auth, upload.single('image'), async(req, res)=> {
+    const recipe = await Recipe.findOne({_id: req.params.id, owner: req.user._id})
+    if(!recipe) {
+        return res.status(404).send()
+    }
+    recipe.image  = await sharp(req.file.buffer).resize({width:250, height: 250}).png().toBuffer()
+    await recipe.save()
+    res.send()
+}, (error, req, res, next)=> {
+    res.status(400).send({error: error.message})
+})
+
+router.delete('/recipes/:id/image', auth, async(req, res)=> {
+    const recipe = await Recipe.findOne({_id: req.params.id, owner: req.user._id})
+    if(!recipe) {
+        return res.status(404).send()
+    }
+    recipe.image = undefined
+    await recipe.save()
+    res.send()
+})
+
+router.get('/recipes/:id/image', auth, async(req, res)=> {
+    try {
+        const recipe = await Recipe.findOne({_id: req.params.id, owner: req.user._id})
+        if(!recipe || !recipe.image) {
+            throw new Error()
+        }
+
+        res.set('Content-Type', 'image/jpg')
+        res.send(recipe.image)
+    } catch(e) {
+        res.status(400).send()
+    }
+    
+})
 module.exports = router
